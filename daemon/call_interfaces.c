@@ -488,11 +488,22 @@ INLINE void str_hyphenate(bencode_item_t *it) {
 		str_shift(&s, 1);
 	}
 }
+
 INLINE char *bencode_get_alt(bencode_item_t *i, const char *one, const char *two, str *out) {
 	char *o;
 	if ((o = bencode_dictionary_get_str(i, one, out)))
 		return o;
 	return bencode_dictionary_get_str(i, two, out);
+}
+
+//==================================================================================================
+// Return a list from the dictionary according to key one if exists, else according to key two
+//==================================================================================================
+INLINE bencode_item_t *bencode_get_alt_list(bencode_item_t *dict, const char *one, const char *two) {
+	bencode_item_t *list;
+	if((list = bencode_dictionary_get_expect(dict, one, BENCODE_LIST)))
+		return list;
+	return bencode_dictionary_get_expect(dict, two, BENCODE_LIST);
 }
 
 INLINE void ng_sdes_option(struct sdp_ng_flags *out, bencode_item_t *it, unsigned int strip) {
@@ -643,8 +654,14 @@ static void call_ng_process_flags(struct sdp_ng_flags *out, bencode_item_t *inpu
 			ng_sdes_option(out, it, 0);
 	}
 
-	bencode_get_alt(input, "transport-protocol", "transport protocol", &out->transport_protocol_str);
-	out->transport_protocol = transport_protocol(&out->transport_protocol_str);
+	if((list = bencode_get_alt_list(input, "transport-protocol", "transport protocol"))) {
+		for (it = list->child; it; it = it->sibling) {
+			str name;
+			bencode_get_str(it, &name);
+			g_ptr_array_add(out->transport_protocols_arr, (gpointer)transport_protocol(&name));
+		}
+	}
+
 	bencode_get_alt(input, "media-address", "media address", &out->media_address);
 	if (bencode_get_alt(input, "address-family", "address family", &out->address_family_str))
 		out->address_family = get_socket_family_rfc(&out->address_family_str);

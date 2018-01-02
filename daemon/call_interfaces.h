@@ -22,9 +22,11 @@ struct sdp_ng_flags {
 	str received_from_family;
 	str received_from_address;
 	str media_address;
-	str transport_protocol_str;
-	str address_family_str;
+
 	const struct transport_protocol *transport_protocol;
+	GPtrArray *transport_protocols_arr;
+
+	str address_family_str;
 	sockaddr_t parsed_received_from;
 	sockaddr_t parsed_media_address;
 	str direction[2];
